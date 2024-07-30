@@ -41,8 +41,8 @@ def export(sam: Sam, model_output_path: str):
               default='vit_b',
               help='model name',
               type=click.Choice(['vit_b', 'vit_l', 'vit_h']))
-@click.option('--model_path', default='model/sam_vit_b_01ec64.pth', help='model path')
-@click.option('--model_output_path', default='model/sam_vit_b_01ec64.onnx', help='model output path')
+@click.option('--model_path', default='model/sam_vit_h_4b8939.pth', help='model path')
+@click.option('--model_output_path', default='model/sam_vit_h_4b8939.onnx', help='model output path')
 def main(model: str, model_path: str, model_output_path: str):
     sam = sam_model_registry[model](checkpoint=model_path)
     export(sam, model_output_path)

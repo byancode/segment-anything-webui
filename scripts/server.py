@@ -1,4 +1,6 @@
 import io
+import json
+import logging
 import os
 import click
 from fastapi.responses import FileResponse
@@ -8,7 +10,7 @@ import uvicorn
 import clip
 
 import export_onnx_model
-from fastapi import FastAPI, File, Form
+from fastapi import FastAPI, File, Form, logger
 from pydantic import BaseModel
 from typing import Sequence, Callable
 from segment_anything import SamPredictor, SamAutomaticMaskGenerator, sam_model_registry
@@ -37,6 +39,9 @@ class Box(BaseModel):
 class TextPrompt(BaseModel):
     text: str
 
+def log_file(name, message):
+    with open(f'./scripts/{name}.log', 'a') as f:
+        f.write(message + '\n')
 
 def segment_image(image_array: np.ndarray, segmentation_mask: np.ndarray):
     segmented_image = np.zeros_like(image_array)
@@ -65,10 +70,10 @@ def retrieve(
 
 @click.command()
 @click.option('--model',
-              default='vit_b',
+              default='vit_h',
               help='model name',
               type=click.Choice(['vit_b', 'vit_l', 'vit_h']))
-@click.option('--model_path', default='model/sam_vit_b_01ec64.pth', help='model path')
+@click.option('--model_path', default='model/sam_vit_h_4b8939.pth', help='model path')
 @click.option('--port', default=8000, help='port')
 @click.option('--host', default='0.0.0.0', help='host')
 def main(model, model_path, port, host, ):
@@ -175,8 +180,18 @@ def main(model, model_path, port, host, ):
         image_data = Image.open(io.BytesIO(file))
         image_array = np.array(image_data)
         masks = mask_generator.generate(image_array)
-        arg_idx = np.argsort([mask['stability_score']
-                              for mask in masks])[::-1].tolist()
+
+        # save image to ./scripts/segmented_images/original_image.jpg
+        image_data.save('./scripts/segmented_images/original_image.jpg')
+
+        # guardamos las imagenes segmentadas en la carpeta ./scripts/segmented_images
+        segmented_images = []
+        for mask in masks:
+            segmented_images.append(segment_image(image_array, mask["segmentation"]))
+            segmented_image = Image.fromarray(segmented_images[-1])
+            segmented_image.save(f'./scripts/segmented_images/segmented_image_{len(segmented_images)}.jpg')
+
+        arg_idx = np.argsort([mask['stability_score'] for mask in masks])[::-1].tolist()
         masks = [masks[i] for i in arg_idx]
         for mask in masks:
             mask['segmentation'] = compress_mask(mask['segmentation'])

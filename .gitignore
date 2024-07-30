@@ -4,6 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
+./scripts/segmented_images/segmented_image_*
 
 # testing
 /coverage
